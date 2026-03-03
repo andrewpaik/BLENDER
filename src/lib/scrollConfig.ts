@@ -128,8 +128,11 @@ export const scrollSections: ScrollSection[] = [
   },
 ];
 
+/** Base path prefix — set by NEXT_PUBLIC_BASE_PATH for GitHub Pages */
+export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 /** Path pattern for frame images — 1-indexed, zero-padded to 4 digits */
 export function framePath(index: number): string {
   const padded = String(index + 1).padStart(4, "0");
-  return `/frames/frame-${padded}.jpg`;
+  return `${BASE_PATH}/frames/frame-${padded}.jpg`;
 }

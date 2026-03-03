@@ -5,6 +5,8 @@
  * Each item has a URL-safe slug for routing.
  */
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 export interface Project {
   slug: string;
   title: string;
@@ -68,7 +70,7 @@ export const PROJECTS: Project[] = [
     year: "2024",
     status: "Complete",
     repo: "https://github.com/andrewpaik/poker-gto-trainer",
-    previewImage: "/images/projects/poker.png",
+    previewImage: `${BASE_PATH}/images/projects/poker.png`,
     type: "project",
   },
   {
@@ -82,7 +84,7 @@ export const PROJECTS: Project[] = [
     year: "2024",
     status: "Complete",
     repo: "https://github.com/andrewpaik/neighborhood",
-    previewImage: "/images/projects/neighborhood.png",
+    previewImage: `${BASE_PATH}/images/projects/neighborhood.png`,
     type: "project",
   },
   {
@@ -96,7 +98,7 @@ export const PROJECTS: Project[] = [
     year: "2024",
     status: "Complete",
     repo: "https://github.com/andrewpaik/data-analyst-agent",
-    previewImage: "/images/projects/data-analyst.png",
+    previewImage: `${BASE_PATH}/images/projects/data-analyst.png`,
     type: "project",
   },
   {
@@ -110,7 +112,7 @@ export const PROJECTS: Project[] = [
     year: "2024",
     status: "Complete",
     repo: "https://github.com/andrewpaik/eye-tracking-app",
-    previewImage: "/images/projects/eye-tracking.png",
+    previewImage: `${BASE_PATH}/images/projects/eye-tracking.png`,
     type: "project",
   },
 ];
