@@ -1,65 +1,59 @@
-import Image from "next/image";
+"use client";
+
+/**
+ * Main page — mounts the scroll-driven cinematic experience.
+ *
+ * Phase 2: Scroll runway is built from segments (free-scroll + resistance).
+ * Resistance segments double as ScrollTrigger trigger elements.
+ */
+
+import { ScrollCanvas } from "@/components/ScrollCanvas";
+import { WebGLLayer } from "@/components/WebGLLayer";
+import { Particles } from "@/components/Particles";
+import { ScrollSections } from "@/components/ScrollSections";
+import { CustomCursor } from "@/components/CustomCursor";
+import { TableOfContents } from "@/components/TableOfContents";
+import { Loader } from "@/components/Loader";
+import { LenisProvider } from "@/lib/LenisProvider";
+import { useFrameSequence } from "@/hooks/useFrameSequence";
+import { scrollSections, RUNWAY_PADDING_VH } from "@/lib/scrollConfig";
+import { buildScrollSegments } from "@/lib/scrollSegments";
+
+const segments = buildScrollSegments(scrollSections, RUNWAY_PADDING_VH);
 
 export default function Home() {
+  const { frames, progress, isLoaded } = useFrameSequence();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <LenisProvider>
+      <Loader progress={progress} isLoaded={isLoaded} />
+      <ScrollCanvas frames={frames} isLoaded={isLoaded} />
+      {isLoaded && <Particles />}
+      {isLoaded && <WebGLLayer />}
+      <ScrollSections />
+      <TableOfContents />
+      <CustomCursor />
+
+      {/* Scroll runway: sequence of free-scroll and resistance segments */}
+      {segments.map((seg, i) => {
+        if (seg.type === "resistance") {
+          return (
+            <div
+              key={`resistance-${seg.section.id}`}
+              data-marker={seg.section.id}
+              style={{ height: `${seg.heightVh}vh` }}
+              aria-hidden="true"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          );
+        }
+        return (
+          <div
+            key={`segment-${i}`}
+            style={{ height: `${seg.heightVh}vh` }}
+            aria-hidden="true"
+          />
+        );
+      })}
+    </LenisProvider>
   );
 }
