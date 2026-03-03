@@ -17,7 +17,8 @@ export interface FrameMappingConfig {
 
 /**
  * Given a normalized progress (0→1) across the frame runway
- * (already stripped of top/bottom padding), return the frame index.
+ * (already stripped of top/bottom padding), return a fractional
+ * frame index (e.g. 30.6) for smooth inter-frame blending.
  */
 export function progressToFrame(
   progress: number,
@@ -45,7 +46,7 @@ export function progressToFrame(
     if (scrollVh <= vhConsumed + freeVhToSection) {
       const remainingVh = scrollVh - vhConsumed;
       framesAdvanced += remainingVh / vhPerFrame;
-      return clamp(Math.round(framesAdvanced), 0, frameCount - 1);
+      return clamp(framesAdvanced, 0, frameCount - 1);
     }
 
     // Advance through free-scroll zone to the section start
@@ -64,7 +65,7 @@ export function progressToFrame(
   // Past all sections — remaining free-scroll to end
   const remainingVh = scrollVh - vhConsumed;
   framesAdvanced += remainingVh / vhPerFrame;
-  return clamp(Math.round(framesAdvanced), 0, frameCount - 1);
+  return clamp(framesAdvanced, 0, frameCount - 1);
 }
 
 /**

@@ -34,7 +34,7 @@ const mappingConfig = {
 export function ScrollCanvas({ frames, isLoaded }: ScrollCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const lastDrawnFrame = useRef(-1);
+  const lastFrameValue = useRef(-1);
   const lenis = useLenis();
   const device = useDeviceDetect();
 
@@ -55,29 +55,64 @@ export function ScrollCanvas({ frames, isLoaded }: ScrollCanvasProps) {
       ctxRef.current = ctx;
     }
 
-    lastDrawnFrame.current = -1;
+    lastFrameValue.current = -1;
   }, [device]);
 
-  /** Draw a frame to the canvas, cover-fit */
-  const drawFrame = useCallback((frameIndex: number) => {
+  /** Cover-fit helper — computes draw rect for an image */
+  const coverFit = useCallback((img: HTMLImageElement) => {
+    const cw = window.innerWidth;
+    const ch = window.innerHeight;
+    const scale = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
+    const drawW = img.naturalWidth * scale;
+    const drawH = img.naturalHeight * scale;
+    return { x: (cw - drawW) / 2, y: (ch - drawH) / 2, w: drawW, h: drawH };
+  }, []);
+
+  /**
+   * Draw a blended frame to the canvas.
+   * fractionalFrame 30.6 → draws frame 30 at 40% and frame 31 at 60%.
+   * When exactly on an integer, draws a single frame (no blend overhead).
+   */
+  const drawBlended = useCallback((fractionalFrame: number) => {
     const ctx = ctxRef.current;
-    const img = frames[frameIndex];
-    if (!ctx || !img) return;
+    if (!ctx) return;
 
     const cw = window.innerWidth;
     const ch = window.innerHeight;
-    const iw = img.naturalWidth;
-    const ih = img.naturalHeight;
+    const lo = Math.floor(fractionalFrame);
+    const hi = Math.min(lo + 1, frames.length - 1);
+    const t = fractionalFrame - lo;
 
-    const scale = Math.max(cw / iw, ch / ih);
-    const drawW = iw * scale;
-    const drawH = ih * scale;
-    const drawX = (cw - drawW) / 2;
-    const drawY = (ch - drawH) / 2;
+    const imgA = frames[lo];
+    if (!imgA) return;
 
     ctx.clearRect(0, 0, cw, ch);
-    ctx.drawImage(img, drawX, drawY, drawW, drawH);
-  }, [frames]);
+
+    // If on an exact frame or both frames are the same, draw once
+    if (t < 0.005 || lo === hi) {
+      const r = coverFit(imgA);
+      ctx.drawImage(imgA, r.x, r.y, r.w, r.h);
+      return;
+    }
+
+    const imgB = frames[hi];
+    if (!imgB) {
+      const r = coverFit(imgA);
+      ctx.drawImage(imgA, r.x, r.y, r.w, r.h);
+      return;
+    }
+
+    // Cross-fade: draw frame A, then overlay frame B with proportional alpha
+    const rA = coverFit(imgA);
+    ctx.globalAlpha = 1;
+    ctx.drawImage(imgA, rA.x, rA.y, rA.w, rA.h);
+
+    ctx.globalAlpha = t;
+    const rB = coverFit(imgB);
+    ctx.drawImage(imgB, rB.x, rB.y, rB.w, rB.h);
+
+    ctx.globalAlpha = 1;
+  }, [frames, coverFit]);
 
   useEffect(() => {
     if (!isLoaded || frames.length === 0 || !lenis) return;
@@ -89,7 +124,7 @@ export function ScrollCanvas({ frames, isLoaded }: ScrollCanvasProps) {
     const startFraction = RUNWAY_PADDING_VH / totalVh;
     const endFraction = 1 - (RUNWAY_PADDING_VH / totalVh);
 
-    // On every Lenis tick, map smoothed progress to a frame
+    // On every Lenis tick, map smoothed progress to a fractional frame
     function onScroll() {
       const progress = lenis!.progress;
 
@@ -100,12 +135,13 @@ export function ScrollCanvas({ frames, isLoaded }: ScrollCanvasProps) {
         1,
       );
 
-      // Piecewise mapping handles resistance zones
-      const frameIndex = progressToFrame(runwayProgress, mappingConfig);
+      // Piecewise mapping returns fractional frame (e.g. 30.6)
+      const fractionalFrame = progressToFrame(runwayProgress, mappingConfig);
 
-      if (frameIndex !== lastDrawnFrame.current) {
-        drawFrame(frameIndex);
-        lastDrawnFrame.current = frameIndex;
+      // Redraw if the frame value changed enough to be visible
+      if (Math.abs(fractionalFrame - lastFrameValue.current) > 0.001) {
+        drawBlended(fractionalFrame);
+        lastFrameValue.current = fractionalFrame;
       }
     }
 
@@ -123,14 +159,14 @@ export function ScrollCanvas({ frames, isLoaded }: ScrollCanvasProps) {
     window.addEventListener("resize", onResize);
 
     // Draw first frame immediately
-    drawFrame(0);
+    drawBlended(0);
 
     return () => {
       lenis.off("scroll", onScroll);
       window.removeEventListener("resize", onResize);
       clearTimeout(resizeTimeout);
     };
-  }, [isLoaded, frames, lenis, resizeCanvas, drawFrame]);
+  }, [isLoaded, frames, lenis, resizeCanvas, drawBlended]);
 
   return (
     <canvas
